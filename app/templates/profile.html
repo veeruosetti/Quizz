@@ -1,0 +1,33 @@
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    
+    <!-- Display current avatar -->
+    {% if user.avatar %}
+        <p><img src="{{ url_for('static', filename=current_user.avatar) }}" alt="User Avatar" style="width: 128px; height: 128px;"></p>
+    {% else %}
+        <p><img src="data:image/png;base64,{{ user.gen_avatar(size=120, write_png=False) }}" style="width: 128px; height: 128px;"></p>
+    {% endif %}
+
+    <!-- Phone field -->
+    <p>
+        {{ form.phone.label }}<br>
+        {{ form.phone(size=32) }}<br>
+        {% for error in form.phone.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <!-- Avatar upload -->
+    <p>
+        {{ form.avatar.label }}<br>
+        {{ form.avatar() }}<br>
+        {% for error in form.avatar.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <!-- Submit button -->
+    <p>
+        <input type="submit" value="Update Profile">
+    </p>
+</form>

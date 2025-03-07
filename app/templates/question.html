@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Questions</h1>
+
+    <!-- Display the list of questions -->
+    <div>
+        {% if questions %}
+            <ul class="list-group">
+                {% for question in questions %}
+                    <li class="list-group-item">
+                        <h5>{{ question.title }}</h5>
+                        <p>{{ question.content }}</p>
+                        <small>Asked by: {{ question.user.username }} on {{ question.created_at }}</small>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No questions available yet. Be the first to ask!</p>
+        {% endif %}
+    </div>
+
+    <!-- Only show this button if the user is an admin -->
+    {% if current_user.is_admin %}
+        <a href="{{ url_for('ask_question') }}" class="btn btn-primary mt-3">Ask a New Question</a>
+    {% endif %}
+{% endblock %}

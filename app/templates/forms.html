@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    {% include "_user.html" %}
+
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.phone.label }}<br>
+            {{ form.phone(size=32) }}<br>
+            {% for error in form.phone.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <p>
+            <input type="submit" value="Update Profile">
+        </p>
+    </form>
+{% endblock %}

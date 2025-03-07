@@ -1,0 +1,30 @@
+<table>
+    <tr>
+        <td>
+            {% if user.avatar %}
+            <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="User Avatar" style="width: 128px; height: 128px;">
+            {% else %}
+            <img src="data:image/png;base64,{{ user.gen_avatar(size=120, write_png=False) }}" style="width: 128px; height: 128px;">
+            {% endif %}
+        </td>
+        <td>
+            <h1>{{ user.username }}</h1>
+            {% if user.email %}
+                <p>Email: {{ user.email }}</p>
+            {% endif %}
+            {% if user.phone %}
+                <p>Phone: {{ user.phone }}</p>
+            {% endif %}
+            {% if user.location %}
+                <p>Location: {{ user.location }}</p>
+            {% endif %}
+            {% if user.date_of_birth %}
+                <p>Date of Birth: {{ user.date_of_birth.strftime('%B %d, %Y') }}</p>
+            {% endif %}
+            
+            {% if user == current_user %}
+                <p><a href="{{ url_for('profile', username=user.username) }}">Update Profile</a></p>
+            {% endif %}
+        </td>
+    </tr>
+</table>
