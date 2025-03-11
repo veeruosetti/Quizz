@@ -1,10 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
 <table>
     <tr>
         <td>
             {% if user.avatar %}
-            <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="User Avatar" style="width: 128px; height: 128px;">
+                <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="User Avatar" style="width: 128px; height: 128px;">
             {% else %}
-            <img src="data:image/png;base64,{{ user.gen_avatar(size=120, write_png=False) }}" style="width: 128px; height: 128px;">
+                <img src="data:image/png;base64,{{ user.gen_avatar(size=120, write_png=False) }}" style="width: 128px; height: 128px;">
             {% endif %}
         </td>
         <td>
@@ -28,3 +31,16 @@
         </td>
     </tr>
 </table>
+
+<!-- Check if user has subjects -->
+{% if user.subjects %}
+    <h2>Subjects</h2>
+    <ul>
+        {% for subject in user.subjects %}
+            <li>{{ subject.name }} - {{ subject.description or "No description available" }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No subjects associated with this user yet.</p>
+{% endif %}
+{% endblock %}

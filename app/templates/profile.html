@@ -1,12 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
 <form method="POST" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     
+    <h2>Update Your Profile</h2>
+
     <!-- Display current avatar -->
-    {% if user.avatar %}
-        <p><img src="{{ url_for('static', filename=current_user.avatar) }}" alt="User Avatar" style="width: 128px; height: 128px;"></p>
-    {% else %}
-        <p><img src="data:image/png;base64,{{ user.gen_avatar(size=120, write_png=False) }}" style="width: 128px; height: 128px;"></p>
-    {% endif %}
+    <p>
+        {% if user.avatar %}
+            <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="User Avatar" style="width: 128px; height: 128px;">
+        {% else %}
+            <img src="data:image/png;base64,{{ user.gen_avatar(size=120, write_png=False) }}" style="width: 128px; height: 128px;">
+        {% endif %}
+    </p>
 
     <!-- Phone field -->
     <p>
@@ -30,4 +37,16 @@
     <p>
         <input type="submit" value="Update Profile">
     </p>
+    
+    <!-- Success/Error Message -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+                {% for message in messages %}
+                    <li style="color: green;">{{ message }}</li> <!-- Success Message -->
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
 </form>
+{% endblock %}

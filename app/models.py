@@ -1,27 +1,24 @@
 import os
 from flask_login import UserMixin
 from app import db
-from datetime import timedelta
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from typing import Optional
 import pydenticon, hashlib, base64
 from app import login
-from hashlib import md5
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # User table
 class User(UserMixin, db.Model):
     __tablename__ = 'user'
 
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String(64), index=True, unique=True)
     email: so.Mapped[str] = so.mapped_column(sa.String(120), index=True, unique=True)
     password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
     phone: so.Mapped[str] = so.mapped_column(sa.String(15), index=True, unique=True)
     is_admin: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False)
     avatar: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256), nullable=True)
-    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
@@ -60,78 +57,55 @@ class User(UserMixin, db.Model):
 
 @login.user_loader
 def load_user(id):
-    return db.session.get(User, int(id))
+    return db.session.query(User).get(int(id))
 
-# # Subject table
-# class Subject(db.Model):
-#     __tablename__ = 'subject'
+# Subject table
+class Subject(db.Model):
+    __tablename__ = 'subject'
 
-#     id: so.Mapped[int] = sa.Column(sa.Integer, primary_key=True)  # Primary key
-#     name: so.Mapped[str] = sa.Column(sa.String(100), unique=True, nullable=False)  # Name of the subject
-#     description: so.Mapped[str] = sa.Column(sa.Text, nullable=True)  # Optional description of the subject
-#     created_at: so.Mapped[sa.DateTime] = sa.Column(sa.DateTime, default=sa.func.now())  # Timestamp when subject is created
-
-#     # Relationship with Topic (one-to-many)
-#     topics: so.Mapped[list["Topic"]] = so.relationship("Topic", backref="subject", lazy=True)
-
-#     def __init__(self, name: str, description: str = None):
-#         self.name = name
-#         self.description = description
-
-#     def __repr__(self):
-#         return f"<Subject {self.name}>"  
- 
-# # Topic table
-# class Topic(db.Model):
-#     __tablename__ = 'topic'
-
-#     # Define columns
-#     id: so.Mapped[int] = sa.Column(sa.Integer, primary_key=True)
-#     name: so.Mapped[str] = sa.Column(sa.String(100), unique=True, nullable=False)  # Topic name
-#     description: so.Mapped[str] = sa.Column(sa.Text, nullable=True)  # Optional description of the topic
-#     created_at: so.Mapped[sa.DateTime] = sa.Column(sa.DateTime, default=sa.func.now())  # Timestamp when the topic is created
-
-#     # Relationship with Subject (one-to-many)
-#     subject_id: so.Mapped[int] = sa.Column(sa.Integer, sa.ForeignKey('subject.id'), nullable=False)  # Foreign key to Subject
-#     subject: so.Mapped["Subject"] = so.relationship( backref="topics", lazy=True)  # One subject can have many topics
-
-#     # Relationship with Question (one-to-many)
-#     questions: so.Mapped[list["Question"]] = so.relationship("Question", backref="topic", lazy=True)  # A topic can have many questions
-
-#     def __init__(self, name: str, subject_id: int, description: str = None):
-#         self.name = name
-#         self.subject_id = subject_id
-#         self.description = description
-
-#     def __repr__(self):
-#         return f"<Topic {self.name}>"
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)  # Primary key
+    name: so.Mapped[str] = so.mapped_column(sa.String(100), unique=True, nullable=False)  # Name of the subject
+    description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)  # Optional description of the subject
+    created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())  # Timestamp when subject is created
     
-#     # Quiz table
-# class Quiz(db.Model):
-#     __tablename__ = 'quiz'
+    # Relationship with Topic (one-to-many)
+    topics: so.Mapped[list["Topic"]] = so.relationship("Topic", back_populates="subject")
 
-#     # Define columns using the latest version (SQLAlchemy 2.0)
-#     id: so.Mapped[int] = sa.Column(sa.Integer, primary_key=True)  # Primary key for the quiz
-#     title: so.Mapped[str] = sa.Column(sa.String(256), nullable=False)  # Title of the quiz
-#     duration: so.Mapped[int] = sa.Column(sa.Integer, nullable=False)  # Duration in minutes
-#     created_at: so.Mapped[sa.DateTime] = sa.Column(sa.DateTime, default=sa.func.now())  # Timestamp for creation
-#     topic_id: so.Mapped[int] = sa.Column(sa.Integer, sa.ForeignKey('topic.id'), nullable=False)  # Foreign key to Topic
+    def __repr__(self):
+        return f"<Subject {self.name}>"
 
-#     # Relationship with Topic (one-to-many)
-#     topic: so.Mapped["Topic"] = so.relationship("Topic", backref="quizzes", lazy=True)  # A topic can have multiple quizzes
+class Topic(db.Model):
+    __tablename__ = 'topic'
 
-#     def __init__(self, title: str, duration: int, topic_id: int):
-#         self.title = title
-#         self.duration = duration
-#         self.topic_id = topic_id
-
-#     def __repr__(self):
-#         return f"<Quiz {self.title}>"
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)  # Primary key
+    name: so.Mapped[str] = so.mapped_column(sa.String(100), unique=True, nullable=False)  # Name of the topic
+    description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)  # Description of the topic
+    created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())  # Timestamp when topic is created
     
+    # Relationship with Subject (many-to-one)
+    subject_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(Subject.id), nullable=False)
+    subject: so.Mapped["Subject"] = so.relationship("Subject", back_populates="topics")
 
-    
+    def __repr__(self):
+        return f"<Topic {self.name}>"
 
+class Quiz(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255))
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    questions = db.relationship('Question', backref='quiz', lazy=True)  # Relationship with Question
 
+    def __repr__(self):
+        return f'<Quiz {self.title}>'
 
+# Question Model (Optional, if you want to store quiz questions)
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String(255), nullable=False)
+    answer = db.Column(db.String(255), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
 
+    def __repr__(self):
+        return f'<Question {self.text}>'
 

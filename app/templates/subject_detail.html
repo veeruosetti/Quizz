@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ subject.name }}</h1>
+    <p>{{ subject.description or "No description available" }}</p>
+
+    {% include "topic_form.html" %}
+
+    <h2>Topics</h2>
+    <ul>
+        {% for topic in subject.topics %}
+            <li>
+                <strong>{{ topic.name }}</strong><br>
+                {{ topic.description or "No description available" }}<br>
+                {% if current_user.is_admin %}
+                <form action="{{ url_for('delete_topic', subject_id=subject.id, topic_id=topic.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

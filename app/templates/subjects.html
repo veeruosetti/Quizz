@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Your Subjects</h1>
+{% if current_user.is_admin %}
+<a href="{{ url_for('new_subject') }}">Add Subject</a>
+{% endif %}
+
+<!-- Display existing subjects -->
+{% if subjects %}
+    <ul>
+        {% for subject in subjects %}
+            <li>
+                <a href="{{ url_for('view_subject', subject_id=subject.id) }}">
+                    <strong>{{ subject.name }}</strong><br>
+                </a>
+                {{ subject.description or "No description available" }}<br>
+                
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('edit_subject', id=subject.id) }}">Edit</a>
+                    <form action="{{ url_for('delete_subject', id=subject.id) }}" method="POST" style="display:inline;"> 
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No subject are available.</p>
+{% endif %}
+{% endblock %}
