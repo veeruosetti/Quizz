@@ -3,10 +3,6 @@
 {% block content %}
 <h1>Quizzes</h1>
 
-{% if current_user.is_admin %}
-    <a href="{{ url_for('new_quiz') }}">Add New Quiz</a>
-{% endif %}
-
 <!-- Display existing quizzes -->
 {% if quizzes %}
     <ul>

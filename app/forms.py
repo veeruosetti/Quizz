@@ -2,12 +2,24 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 from flask_wtf.file import FileField, FileAllowed
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, IntegerField, SelectField, HiddenField
+from wtforms import (
+    StringField, 
+    PasswordField, 
+    BooleanField, 
+    SubmitField, 
+    TextAreaField, 
+    IntegerField, 
+    SelectField, 
+    HiddenField,
+    FieldList,
+    FormField
+)
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Length, Optional
 from flask_login import current_user
 
 from app import db
 from app.models import User, Subject, Topic
+from app.enums import QuestionDurationEnum, QuizStatusEnum
 
 
 # Login Form
@@ -36,20 +48,6 @@ class RegistrationForm(FlaskForm):
         user = db.session.scalar(sa.select(User).where(User.email == email.data))
         if user is not None:
             raise ValidationError("Please use a different email address")
-
-
-# Question Model
-class Question(db.Model):
-    __tablename__ = 'question'
-    __table_args__ = {'extend_existing': True}
-
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(256))
-    content = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=sa.func.now())
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    user = db.relationship('User', backref='questions')
-
 
 # Profile Form
 class ProfileForm(FlaskForm):
@@ -85,3 +83,16 @@ class TopicForm(FlaskForm):
         # Ensure the description is not longer than 1000 characters
         if len(description.data) > 1000:
             raise ValidationError("Description must be less than 1000 characters")
+
+class QuizForm(FlaskForm):
+    duration = SelectField('Question Duration in minutes', choices=[(d.name, d.value) for d in QuestionDurationEnum], validators=[DataRequired()])
+    status = SelectField('Select Status', choices=[(s.name, s.value) for s in QuizStatusEnum], validators=[DataRequired()])
+    submit = SubmitField("Submit")
+
+class QuizQuestionForm(FlaskForm):
+    question = StringField('Question', validators=[DataRequired()])
+    option1 = StringField('Option 1', validators=[DataRequired()])
+    option2 = StringField('Option 2', validators=[DataRequired()])
+    option3 = StringField('Option 3', validators=[DataRequired()])
+    option4 = StringField('Option 4', validators=[DataRequired()])
+    submit = SubmitField('Submit')

@@ -1,0 +1,24 @@
+<!-- quiz_questions.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Quiz: {{ quiz.title }}</h1>
+<p>{{ quiz.description }}</p>
+
+<h2>Questions</h2>
+<ul>
+    {% for question in questions %}
+    <li>
+        {{ question.question_text }}<br>
+        Choices: {{ question.choices }}<br>
+        Correct Answer: {{ question.correct_answer }}<br>
+        <a href="{{ url_for('edit_quiz_question', quiz_id=quiz.id, question_id=question.id) }}">Edit</a> | 
+        <form action="{{ url_for('delete_quiz_question', quiz_id=quiz.id, question_id=question.id) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+
+<a href="{{ url_for('add_quiz_question', quiz_id=quiz.id) }}">Add New Question</a>
+{% endblock %}

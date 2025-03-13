@@ -2,14 +2,14 @@
 <html>
     <head>
         {% if title %}
-        <title>{{ title }} - Blog</title>
+        <title>{{ title }} - Quizz</title>
         {% else %}
-        <title>Welcome to Blog</title>
+        <title>Welcome to Quizz</title>
         {% endif %}
     </head>
     <body>
         <div>
-            Blog: 
+            Quizz: 
             <a href="{{ url_for('index') }}">Home</a>
             {% if current_user.is_anonymous %}
             <a href="{{ url_for('login') }}">Login</a>

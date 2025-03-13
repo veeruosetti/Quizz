@@ -8,8 +8,17 @@ from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.utils import secure_filename
 import sqlalchemy as sa
 from app import db, app
-from app.models import User, Subject, Topic, Quiz 
-from app.forms import LoginForm, RegistrationForm, ProfileForm, SubjectForm, TopicForm
+from app.models import User, Subject, Topic, Quiz, QuizQuestion 
+from app.enums import QuestionDurationEnum, QuizStatusEnum
+from app.forms import (
+    LoginForm, 
+    RegistrationForm, 
+    ProfileForm, 
+    SubjectForm, 
+    TopicForm,
+    QuizForm,
+    QuizQuestionForm
+)
 
 
 # TopicForm with added extra fields
@@ -27,7 +36,6 @@ class TopicForm(FlaskForm):
 
 @app.route('/index')
 @app.route('/')
-@login_required
 def index():
     return render_template("index.html", title="Home")
 
@@ -121,9 +129,6 @@ def profile(username):
 @app.route("/subjects", methods=["GET"])
 @login_required
 def subjects():
-    if not current_user.is_admin:
-        flash("permission denied", "danger")
-        return redirect(url_for("index"))
     subjects = db.session.execute(sa.select(Subject)).scalars().all()
     return render_template("subjects.html", subjects=subjects)
 
@@ -164,14 +169,14 @@ def edit_subject(id):
     
     return render_template("subject_form.html", form=form, subject=subject)
 
-@app.route("/subjects/<int:id>/delete", methods=["POST"])
+@app.route("/subjects/<int:subject_id>/delete", methods=["POST"])
 @login_required
-def delete_subject(id):
+def delete_subject(subject_id):
     if not current_user.is_admin:
         flash("permission denied", "danger")
         return redirect(url_for("subjects"))
     
-    subject = db.session.scalar(sa.select(Subject).where(Subject.id == id))
+    subject = db.session.scalar(sa.select(Subject).where(Subject.id == subject_id))
     
     if not subject:
         flash("Subject not found or you do not have permission to delete it.", "danger")
@@ -182,28 +187,50 @@ def delete_subject(id):
     flash("Subject deleted successfully!", "success")
     return redirect(url_for("subjects"))
 
-@app.route("/subjects/<int:subject_id>/topics/new", methods=["GET", "POST"])
+@app.route("/subjects/<int:subject_id>/topics", methods=["GET", "POST"])
 @login_required
-def new_topic(subject_id):
-    subject = db.session.scalar(sa.select(Subject).where(Subject.id == subject_id))
+def topics(subject_id):
+    subject = db.first_or_404(sa.select(Subject).where(Subject.id==subject_id))
+    topics = db.session.scalars(sa.select(Topic).where(Topic.subject_id == subject_id)).all()
     if not subject:
         flash("Subject not found.", "danger")
         return redirect(url_for("subjects"))
-
+    
     form = TopicForm()
-    form.subject_id.data = subject.id  # Set the subject ID for the topic
 
-    if form.validate_on_submit():
+    if not current_user.is_anonymous and current_user.is_admin and form.validate_on_submit():
         topic = Topic(
             name=form.name.data,
-            description=form.description.data
+            description=form.description.data,
+            subject = subject
         )
         db.session.add(topic)
         db.session.commit()
         flash("Topic created successfully!", "success")
         return redirect(url_for("view_subject", subject_id=subject_id))  # Redirect to subject page
 
-    return render_template("topic_form.html", form=form, subject=subject)
+
+    return render_template("subject_topics.html", form=form, subject=subject, topics=topics)
+
+@app.route("/subjects/<int:subject_id>/topics/<int:topic_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_topic(subject_id, topic_id):
+    topic = db.first_or_404(sa.select(Topic).where(
+        Topic.id == topic_id, Topic.subject_id == subject_id
+    ))
+
+    form = TopicForm(obj=topic)
+
+    if current_user.is_anonymous and not current_user.is_admin:
+        redirect(url_for('view_subject', subject_id=subject_id))
+
+    if form.validate_on_submit():
+        topic.name=form.name.data
+        topic.description=form.description.data
+
+        db.session.commit()
+        return redirect(url_for('view_subject', subject_id=subject_id))
+    return render_template("topic_form.html", form=form)
 
 @app.route("/subjects/<int:subject_id>/topics/<int:topic_id>/delete", methods=["GET", "POST"])
 @login_required
@@ -220,68 +247,76 @@ def delete_topic(subject_id, topic_id):
 
 @app.route("/subjects/<int:subject_id>", methods=["GET", "POST"])
 def view_subject(subject_id):
-    subject = db.session.scalar(sa.select(Subject).where(Subject.id == subject_id))
+    subject = db.first_or_404(sa.select(Subject).where(Subject.id == subject_id))
     if not subject:
         flash("Subject not found.", "danger")
         return redirect(url_for("subjects"))
 
-    form = TopicForm()
+    if current_user.is_anonymous and not current_user.is_admin:
+        quizzes = db.session.scalars(sa.select(Quiz).where(Quiz.subject_id == subject_id, Quiz.status == QuizStatusEnum.FROZEN.value))
+    else:
+        quizzes = db.session.scalars(sa.select(Quiz).where(Quiz.subject_id == subject_id))
+
+    form = QuizForm()
 
     if form.validate_on_submit():
-        topic = Topic(name=form.name.data, description=form.description.data, subject=subject)
-        db.session.add(topic)
+        quiz = Quiz(duration=form.duration.data, status=form.status.data, quiz_subject=subject)
+        db.session.add(quiz)
         db.session.commit()
-        flash("Topic created successfully!", "success")
-        return redirect(url_for("subjects"))
+        flash("Quiz created successfully!", "success")
+        return redirect(url_for("view_subject", subject_id=subject_id))
 
-    return render_template("subject_detail.html", form=form, subject=subject)
+    return render_template("subject_details.html", form=form, subject=subject, quizzes=quizzes)
 
-@app.route('/quizzes')
-def quizzes():
-    quizzes = Quiz.query.all()  # Assuming you have a Quiz model
-    return render_template("quiz.html", quizzes=quizzes)
-
-# Route for viewing a specific quiz
-@app.route('/quiz/<int:id>')
-def view_quiz(id):
-    quiz = Quiz.query.get_or_404(id)  # Get quiz by id or show 404 if not found
-    return render_template("view_quiz.html", quiz=quiz)
-
-# Route for creating a new quiz (only admin can do this)
-@app.route('/quiz/new', methods=['GET', 'POST'])
-def new_quiz():
-    if not current_user.is_admin:
-        return redirect(url_for('quizzes'))  # Redirect if not admin
-    if request.method == 'POST':
-        # Handle form submission to create a new quiz
-        title = request.form['title']
-        description = request.form['description']
-        new_quiz = Quiz(title=title, description=description)
-        db.session.add(new_quiz)
+@app.route("/subject/<int:subject_id>/quizzes/<int:quiz_id>", methods=["GET", "POST"])
+def view_quiz(subject_id, quiz_id):
+    quiz = db.first_or_404(sa.select(Quiz).where(Quiz.id == quiz_id, Quiz.subject_id == subject_id))
+    questions = db.session.scalars(sa.select(QuizQuestion).where(QuizQuestion.quiz_id == quiz_id)).all()
+    form = QuizQuestionForm()
+    
+    if form.validate_on_submit():
+        new_question = QuizQuestion(
+            question=form.question.data,
+            option1=form.option1.data,
+            option2=form.option2.data,
+            option3=form.option3.data,
+            option4=form.option4.data,
+            quiz = quiz
+        )
+        db.session.add(new_question)
         db.session.commit()
-        return redirect(url_for('quizzes'))
-    return render_template('new_quiz.html')  # Render form to create new quiz
+        
+        flash("Question created successfully!", "success")
+        return redirect(url_for("view_quiz", subject_id=quiz.subject_id, quiz_id=quiz_id))
+    return render_template("quiz_details.html", quiz=quiz, form=form, questions=questions)
 
-# Route for editing a quiz
-@app.route('/quiz/edit/<int:id>', methods=['GET', 'POST'])
-def edit_quiz(id):
-    if not current_user.is_admin:
-        return redirect(url_for('quizzes'))  # Redirect if not admin
-    quiz = Quiz.query.get_or_404(id)
-    if request.method == 'POST':
-        # Handle form submission to edit quiz
-        quiz.title = request.form['title']
-        quiz.description = request.form['description']
+@app.route("/subject/<int:subject_id>/quizzes/<int:quiz_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_quiz(subject_id, quiz_id):
+    quiz = db.first_or_404(sa.select(Quiz).where(Quiz.id == quiz_id, Quiz.subject_id == subject_id))
+    
+    form = QuizForm()
+    if request.method == "GET":
+        form.duration.data = quiz.duration.name
+        form.status.data = quiz.status.name
+
+    if form.validate_on_submit():
+        quiz.duration = QuestionDurationEnum[form.duration.data]
+        quiz.status = QuizStatusEnum[form.status.data]
         db.session.commit()
-        return redirect(url_for('quizzes'))
-    return render_template('edit_quiz.html', quiz=quiz)
+        return redirect(url_for("view_subject", subject_id=subject_id))
+
+    return render_template("quiz_form.html", form=form)
 
 # Route for deleting a quiz
-@app.route('/quiz/delete/<int:id>', methods=['POST'])
-def delete_quiz(id):
-    if not current_user.is_admin:
-        return redirect(url_for('quizzes'))  # Redirect if not admin
-    quiz = Quiz.query.get_or_404(id)
-    db.session.delete(quiz)
-    db.session.commit()
-    return redirect(url_for('quizzes'))
+@app.route('/subject/<int:subject_id>/quizzes/<int:quiz_id>', methods=['POST'])
+def delete_quiz(subject_id, quiz_id):
+    quiz = db.first_or_404(sa.select(Quiz).where(Quiz.id == quiz_id, Quiz.subject_id == subject_id))
+
+    if not current_user.is_anonymous and current_user.is_admin:
+            db.session.delete(quiz)
+            db.session.commit()
+    
+    return redirect(url_for('view_subject', subject_id=subject_id))
+
+

@@ -1,0 +1,20 @@
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+
+    <p>
+        {{ form.duration.label }}<br>
+        {{ form.duration() }}
+        {% for error in form.duration.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.status.label }}<br>
+        {{ form.status() }}
+        {% for error in form.status.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>{{ form.submit() }}</p>
+</form>

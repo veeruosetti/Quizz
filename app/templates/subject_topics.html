@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ subject.name }}</h1>
+
+    {% if not current_user.is_anonymous and current_user.is_admin %}
+    {% include "_topic_form.html" %}
+    {% endif %}
+
+    <h2>Topics</h2>
+    <ul>
+        {% for topic in subject.topics %}
+            <li>
+                <table>
+                    <tr>
+                        <td>
+                            <strong>{{ topic.name }}</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            {{ topic.description or "No description available" }}
+                        </td>
+                    </tr>
+                {% if current_user.is_admin %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('edit_topic', subject_id=topic.subject_id, topic_id=topic.id) }}">Edit</a>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('delete_topic', subject_id=topic.subject_id, topic_id=topic.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endif %}
+                </table>
+            </li><br>
+        {% endfor %}
+    </ul>
+{% endblock %}

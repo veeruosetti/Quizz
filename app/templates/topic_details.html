@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <table>
+        <tr>
+            <td>
+                <strong>{{ topic.name }}</strong>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {{ topic.description or "No description available" }}
+            </td>
+        </tr>
+            </td>
+        </tr>
+    </table>
+{% endblock %}

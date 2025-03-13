@@ -1,4 +1,6 @@
 import os
+from datetime import date
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from app import db
 import sqlalchemy as sa
@@ -7,6 +9,7 @@ from typing import Optional
 import pydenticon, hashlib, base64
 from app import login
 from werkzeug.security import generate_password_hash, check_password_hash
+from app.enums import QuestionDurationEnum, QuizStatusEnum
 
 # User table
 class User(UserMixin, db.Model):
@@ -54,11 +57,6 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return '<User {}>'.format(self.username)
 
-
-@login.user_loader
-def load_user(id):
-    return db.session.query(User).get(int(id))
-
 # Subject table
 class Subject(db.Model):
     __tablename__ = 'subject'
@@ -70,6 +68,7 @@ class Subject(db.Model):
     
     # Relationship with Topic (one-to-many)
     topics: so.Mapped[list["Topic"]] = so.relationship("Topic", back_populates="subject")
+    quizzes: so.Mapped[list["Quiz"]] = so.relationship("Quiz", back_populates="quiz_subject")
 
     def __repr__(self):
         return f"<Subject {self.name}>"
@@ -90,22 +89,62 @@ class Topic(db.Model):
         return f"<Topic {self.name}>"
 
 class Quiz(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(255))
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-    questions = db.relationship('Question', backref='quiz', lazy=True)  # Relationship with Question
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+    created_at: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False, default=lambda: datetime.now(timezone.utc))
+    duration: so.Mapped[QuestionDurationEnum] = so.mapped_column(
+        sa.Enum(QuestionDurationEnum),
+        nullable=False,
+        default=QuestionDurationEnum.ONE_MINUTE
+    )
+    status: so.Mapped[QuizStatusEnum] = so.mapped_column(
+        sa.Enum(QuizStatusEnum), 
+        nullable=False,
+        default=QuizStatusEnum.OPEN
+    )
+
+    subject_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(Subject.id), nullable=False)
+    quiz_subject: so.Mapped["Subject"] = so.relationship("Subject", back_populates="quizzes")
+    questions: so.Mapped[list["QuizQuestion"]] = so.relationship("QuizQuestion", back_populates="quiz")
+    
+    def __repr__(self):
+        return f'<Quiz {self.id}>'
+
+class QuizQuestion(db.Model):
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+    question: so.Mapped[str] = so.mapped_column(sa.Text, nullable=False)
+    created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
+    option1: so.Mapped[str] = so.mapped_column(sa.Text, nullable=False)
+    option2: so.Mapped[str] = so.mapped_column(sa.Text, nullable=False)
+    option3: so.Mapped[str] = so.mapped_column(sa.Text, nullable=False)
+    option4: so.Mapped[str] = so.mapped_column(sa.Text, nullable=False)
+    quiz_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(Quiz.id), nullable=False)
+    quiz: so.Mapped["Quiz"] = so.relationship("Quiz", back_populates="questions")
 
     def __repr__(self):
-        return f'<Quiz {self.title}>'
+        return f"<Question {self.question}>"
 
-# Question Model (Optional, if you want to store quiz questions)
-class Question(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.String(255), nullable=False)
-    answer = db.Column(db.String(255), nullable=False)
-    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+class QuizzQuestionAnsers(db.Model):
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+    answer: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
+    created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
+    question_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(QuizQuestion.id), nullable=False)
+    question: so.Mapped["QuizQuestion"] = so.relationship("QuizQuestion", back_populates="answers")
+
+    def __repr__(self): 
+        return f"<Answer {self.answer}>"
+
+class QuizQuestionUserAnswers(db.Model):
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+    answer: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
+    created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
+    question_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(QuizQuestion.id), nullable=False)
+    user_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(User.id), nullable=False)
+    question: so.Mapped["QuizQuestion"] = so.relationship("QuizQuestion", back_populates="user_answers")
+    user: so.Mapped["User"] = so.relationship("User", back_populates="answers")
 
     def __repr__(self):
-        return f'<Question {self.text}>'
+        return f"<Answer {self.answer}>"
 
+@login.user_loader
+def load_user(id):
+    return db.session.query(User).get(int(id))

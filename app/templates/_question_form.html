@@ -1,0 +1,46 @@
+<form method="POST">
+    {{ form.hidden_tag() }}
+    
+    <p>
+        {{ form.question.label }}
+        {{ form.question() }}
+        {% for error in form.question.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+    
+    <h3>Options</h3>
+    <p>
+        {{ form.option1.label }}
+        {{ form.option1() }}
+        {% for error in form.option1.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.option2.label }}
+        {{ form.option2() }}
+        {% for error in form.option2.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.option3.label }}
+        {{ form.option3() }}
+        {% for error in form.option3.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.option4.label }}
+        {{ form.option4() }}
+        {% for error in form.option4.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+    
+    <p>{{ form.submit() }}</p>
+</form>
