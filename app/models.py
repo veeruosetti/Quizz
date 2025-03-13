@@ -119,31 +119,33 @@ class QuizQuestion(db.Model):
     option4: so.Mapped[str] = so.mapped_column(sa.Text, nullable=False)
     quiz_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(Quiz.id), nullable=False)
     quiz: so.Mapped["Quiz"] = so.relationship("Quiz", back_populates="questions")
+    # answers: so.Mapped[list["QuizzQuestionAnsers"]] = so.relationship("QuizzQuestionAnsers", back_populates="question")
+    # users_answers: so.Mapped[list["QuizQuestionUserAnswers"]] = so.relationship("QuizQuestionUserAnswers", back_populates="question")
 
     def __repr__(self):
         return f"<Question {self.question}>"
 
-class QuizzQuestionAnsers(db.Model):
-    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
-    answer: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
-    created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
-    question_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(QuizQuestion.id), nullable=False)
-    question: so.Mapped["QuizQuestion"] = so.relationship("QuizQuestion", back_populates="answers")
+# class QuizzQuestionAnsers(db.Model):
+#     id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+#     answer: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
+#     created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
+#     question_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(QuizQuestion.id), nullable=False)
+#     question: so.Mapped["QuizQuestion"] = so.relationship("QuizQuestion", back_populates="answers")
 
-    def __repr__(self): 
-        return f"<Answer {self.answer}>"
+#     def __repr__(self): 
+#         return f"<Answer {self.answer}>"
 
-class QuizQuestionUserAnswers(db.Model):
-    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
-    answer: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
-    created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
-    question_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(QuizQuestion.id), nullable=False)
-    user_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(User.id), nullable=False)
-    question: so.Mapped["QuizQuestion"] = so.relationship("QuizQuestion", back_populates="user_answers")
-    user: so.Mapped["User"] = so.relationship("User", back_populates="answers")
+# class QuizQuestionUserAnswers(db.Model):
+#     id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+#     answer: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
+#     created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
+#     question_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(QuizQuestion.id), nullable=False)
+#     question: so.Mapped["QuizQuestion"] = so.relationship("QuizQuestion", back_populates="user_answers")
+#     user_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(User.id), nullable=False)
+#     user: so.Mapped["User"] = so.relationship("User", back_populates="answers")
 
-    def __repr__(self):
-        return f"<Answer {self.answer}>"
+#     def __repr__(self):
+#         return f"<Answer {self.answer}>"
 
 @login.user_loader
 def load_user(id):
