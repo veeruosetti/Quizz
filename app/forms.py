@@ -11,6 +11,7 @@ from wtforms import (
     IntegerField, 
     SelectField, 
     HiddenField,
+    RadioField,
     FieldList,
     FormField
 )
@@ -107,5 +108,6 @@ class QuizQuestionForm(FlaskForm):
     submit = SubmitField('Submit')
 
 class QuizQuestionAnswerForm(FlaskForm):
-    option = SelectField('Answer', choices=[(o.name, o.value) for o in QuestionAnswerEnum], validators=[DataRequired()])
-    submit = SubmitField('Submit')
+    answer = RadioField('Select your answer', choices=[], coerce=str, validators=[Optional()])
+    frozen = HiddenField()
+    submit = SubmitField('Submit Answer')

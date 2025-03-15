@@ -1,26 +1,71 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         {% if title %}
         <title>{{ title }} - Quizz</title>
         {% else %}
         <title>Welcome to Quizz</title>
         {% endif %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css')}}">
+        <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js')}}"></script>
     </head>
     <body>
-        <div>
-            Quizz: 
-            <a href="{{ url_for('index') }}">Home</a>
-            {% if current_user.is_anonymous %}
-            <a href="{{ url_for('login') }}">Login</a>
-            <a href="{{ url_for('register') }}">Register</a>
-            {% else %}
-            <a href="{{ url_for('subjects') }}">Subjects</a>
-            <a href="{{ url_for('user', username=current_user.username) }}">Profile</a>
-            <a href="{{ url_for('logout') }}">Logout</a>
-            {% endif %}
-        </div>
-        <hr>
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg sticky-top bg-primary" data-bs-theme="dark">
+            <div class="container-fluid">
+                <!-- Website Title -->
+                <a class="navbar-brand" href="#">Quiz</a>
+
+                <!-- Toggle button for small screens -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Navbar Links -->
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">About</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Contact</a>
+                        </li>
+                        {% if current_user.is_anonymous %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('subjects') }}">Subjects</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+
+                    <!-- Right Side: Logout Button and Avatar -->
+                    <div class="d-flex align-items-center">
+                        <!-- Logout Button -->
+                        {% if current_user and current_user.is_active %}
+                        <a class="nav-link text-white me-3" href="{{ url_for('logout') }}">Logout</a>
+                        <!-- User Avatar -->
+                        <a href="{{ url_for('user', username=current_user.username) }}">
+                            {% if current_user.avatar %}
+                            <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="Avatar" class="rounded-circle" style="width: 40px; height: 40px;">
+                            {% else %}
+                            <img src="data:image/png;base64,{{ current_user.gen_avatar(size=120, write_png=False) }}" alt="Dynamic Image" class="rounded-circle" style="width: 40px; height: 40px;">
+                            {% endif %}
+                        </a>
+                        {% else %}
+                        <a class="nav-link text-white me-3" href="{{ url_for('login') }}">Login</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </nav>
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         <ul>
@@ -30,7 +75,9 @@
         </ul>
         {% endif %}
         {% endwith %}
-        {% block content %}
-        {% endblock %}
+        <main class="container mt-5">
+            {% block content %}
+            {% endblock %}
+        </main>
     </body>
 </html>

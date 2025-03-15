@@ -4,8 +4,9 @@
     <h1>{{ subject.name }}</h1>
     <p>{{ subject.description or "No description available" }}</p>
 
+    {% if no current_user.is_anonymous and current_user.is_admin %}
     {% include "topic_form.html" %}
-
+    {% endif %}
     <h2>Topics</h2>
     <ul>
         {% for topic in subject.topics %}

@@ -9,13 +9,16 @@
     {% include "_question_form.html" %}<br>
     {% for question in questions %}
         <p>Q: {{ question.question }}</p>  <!-- Display the question text -->
-        <ul>
+        <ol>
             <li>{{ question.option1 }}</li>  <!-- Display each option -->
             <li>{{ question.option2 }}</li>
             <li>{{ question.option3 }}</li>
             <li>{{ question.option4 }}</li>
-        </ul><br>
-
+        </ol>
+        {% if question.answer %}
+        Answer: {{ question.answer.option.value }}
+        {% endif %}
+        <br>
     {% endfor %}
 
 {% endblock %}

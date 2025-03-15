@@ -22,6 +22,8 @@ class User(UserMixin, db.Model):
     phone: so.Mapped[str] = so.mapped_column(sa.String(15), index=True, unique=True)
     is_admin: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False)
     avatar: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256), nullable=True)
+    answers: so.WriteOnlyMapped['QuizQuestionUserAnswers'] = so.relationship(back_populates='author')
+    test_results: so.Mapped[list["TestResult"]] = so.relationship("TestResult", back_populates="user")
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
@@ -105,6 +107,7 @@ class Quiz(db.Model):
     subject_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(Subject.id), nullable=False)
     quiz_subject: so.Mapped["Subject"] = so.relationship("Subject", back_populates="quizzes")
     questions: so.Mapped[list["QuizQuestion"]] = so.relationship("QuizQuestion", back_populates="quiz")
+    test_results: so.Mapped[list["TestResult"]] = so.relationship("TestResult", back_populates="quiz")
     
     def __repr__(self):
         return f'<Quiz {self.id}>'
@@ -141,13 +144,33 @@ class QuizQuestionUserAnswers(db.Model):
     id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
     answer: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=True)
     created_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())
+    locked: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False)
     question_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(QuizQuestion.id), index=True, nullable=False)
     question: so.Mapped["QuizQuestion"] = so.relationship("QuizQuestion", back_populates="user_answer")
-    user_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(User.id), nullable=False)
-    user: so.Mapped["User"] = so.relationship("User", back_populates="answers")
+    author_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(User.id), index=True, nullable=False)
+    author: so.Mapped["User"] = so.relationship("User", back_populates="answers")
+    frozen: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, nullable=True)
 
     def __repr__(self):
         return f"<Answer {self.answer}>"
+
+# Test Result table to store user results for each quiz
+class TestResult(db.Model):
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)  # Primary key
+    user_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(User.id), nullable=False)
+    quiz_id: so.Mapped[int] = so.mapped_column(sa.Integer, sa.ForeignKey(Quiz.id), nullable=False)
+    score: so.Mapped[int] = so.mapped_column(sa.Integer, default=0, nullable=False)  # Score of the user in the quiz
+    total_questions: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)  # Total questions in the quiz
+    time_taken: so.Mapped[float] = so.mapped_column(sa.Float, nullable=False)  # Time taken by the user to complete the quiz
+    completed_at: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime, default=sa.func.now())  # Time when the test was completed
+    is_passed: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False)  # Whether the user passed the quiz
+
+    # Relationship with User and Quiz models
+    user: so.Mapped[User] = so.relationship("User", back_populates="test_results")
+    quiz: so.Mapped[Quiz] = so.relationship("Quiz", back_populates="test_results")
+
+    def __repr__(self):
+        return f"<TestResult user={self.user.username} quiz={self.quiz.id} score={self.score}>"
 
 @login.user_loader
 def load_user(id):

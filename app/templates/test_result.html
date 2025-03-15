@@ -1,0 +1,9 @@
+<!-- test_result.html -->
+<h1>Test Results for Quiz: {{ test_result.quiz.id }}</h1>
+
+<p><strong>User:</strong> {{ test_result.user.username }}</p>
+<p><strong>Score:</strong> {{ test_result.score }} / {{ test_result.total_questions }}</p>
+<p><strong>Time Taken:</strong> {{ test_result.time_taken|round(2) }} seconds</p>
+<p><strong>Passed:</strong> {% if test_result.is_passed %} Yes {% else %} No {% endif %}</p>
+
+<a href="{{ url_for('index') }}">Go Back to Dashboard</a>

@@ -1,4 +1,5 @@
 import os
+import time
 from flask_wtf import FlaskForm  
 from wtforms import StringField, TextAreaField, IntegerField, SelectField, BooleanField, HiddenField, SubmitField  
 from wtforms.validators import DataRequired, Optional  
@@ -14,7 +15,9 @@ from app.models import (
     Topic, 
     Quiz, 
     QuizQuestion, 
-    QuizQuestionAnswer
+    QuizQuestionAnswer,
+    QuizQuestionUserAnswers,
+    TestResult
 ) 
 from app.enums import (
     QuestionDurationEnum, 
@@ -345,19 +348,145 @@ def delete_quiz(subject_id, quiz_id):
     
     return redirect(url_for('view_subject', subject_id=subject_id))
 
+@app.route('/subjects/<int:subject_id>/tests/<int:test_id>/question/<int:question_id>', methods=['GET', 'POST'])
+def question(subject_id, test_id, question_id):
+    # Get the current question from the database
+    question = db.first_or_404(sa.select(QuizQuestion).where(
+        QuizQuestion.quiz_id==test_id, 
+        QuizQuestion.id==question_id
+    ))
 
-# @app.route("/subject/<int:subject_id>/quizzes/<int:quiz_id>/questions/<int:question_id>", methods=["GET", "POST"])
-# def quiz_question_answer(subject_id, quiz_id, question_id):
-#     question = db.first_or_404(sa.select(QuizQuestion).where(QuizQuestion.id == question_id, QuizQuestion.quiz_id == quiz_id))
-#     form = QuizQuestionAnswerForm()
+    user_answer_record = db.session.scalar(sa.select(QuizQuestionUserAnswers).where(
+        QuizQuestionUserAnswers.question_id == question_id,
+        QuizQuestionUserAnswers.author_id == current_user.id
+    ))
+    
+    # Initialize the form
+    form = QuizQuestionAnswerForm()
+    form.answer.choices = [
+        (1, question.option1),
+        (2, question.option2),
+        (3, question.option3),
+        (4, question.option4),
+    ]
 
-#     if form.validate_on_submit():
-#         new_answer = QuizQuestionAnswer(
-#             option=QuestionAnswerEnum[form.option.data],
-#             question=question
-#         )
-#         db.session.add(new_answer)
-#         db.session.commit()
-#         return redirect(url_for("quiz_question_answer", subject_id=subject_id, quiz_id=quiz_id, question_id=question_id))
+    # If the question is frozen and the user has answered, pre-fill the form with the previous answer
+    if user_answer_record:
+        if user_answer_record.frozen:  # Check if the question is frozen
+            form.frozen.data = 'True'  # Set frozen field to True to indicate that the question is frozen
+            # Disable the form (in HTML) using JavaScript
+            form.answer.render_kw = {'disabled': True}  # Disable the answer options
+            form.submit.render_kw = {'disabled': True}  # Disable the submit button
+        if user_answer_record.answer:
+            form.answer.data = user_answer_record.answer  # Pre-fill with the previous answer
+    if form.validate_on_submit():
+        user_answer = form.answer.data or None # Get the selected answer
+        user = current_user
 
-#     return render_template("quiz_question_answer.html", form=form, question=question)
+        # user_answer_record = db.session.scalar(sa.select(QuizQuestionUserAnswers).where(
+        #     QuizQuestionUserAnswers.question_id==question_id,
+        #     QuizQuestionUserAnswers.author_id==user.id
+        # ))
+        if user_answer_record:
+            user_answer_record.answer = int(user_answer) if user_answer is not None else None
+            if not user_answer_record.frozen:
+                user_answer_record.frozen = form.frozen.data == 'True'
+        else:
+            user_answer_record = QuizQuestionUserAnswers(
+                answer=int(user_answer) if user_answer is not None else None,
+                question_id=question.id,
+                author_id=user.id
+            )
+            db.session.add(user_answer_record)
+
+        db.session.commit()
+
+        return redirect(url_for('next_question', subject_id=subject_id, test_id=test_id, question_id=question_id))
+    else:
+        print(form.errors)
+
+    return render_template('test_question.html', question=question, form=form, subject_id=subject_id, test_id=test_id)
+
+@app.route('/subjects/<int:subject_id>/tests/<int:test_id>/question/<int:question_id>/next', methods=['GET'])
+def next_question(subject_id, test_id, question_id):
+    # Get the next question
+    next_question = db.session.scalars(sa.select(QuizQuestion).where(QuizQuestion.id > question_id)).first()
+    # .query.filter(QuizQuestion.id > question_id).first()
+    
+    if next_question:
+        return redirect(url_for('question', subject_id=subject_id, test_id=test_id, question_id=next_question.id))
+    else:
+        # return "Test Completed!"
+        return redirect(url_for('submit_quiz', quiz_id=test_id))
+
+@app.route('/subjects/<int:subject_id>/tests/<int:test_id>/start', methods=['GET'])
+def start_quiz(subject_id, test_id):
+    # Get the first question of the quiz based on test_id
+    first_question = db.session.scalars(sa.select(QuizQuestion).where(QuizQuestion.quiz_id==test_id)).first()
+    # .query.filter_by(quiz_id=test_id).first()
+    
+    if first_question:
+        return redirect(url_for('question', subject_id=subject_id, test_id=test_id, question_id=first_question.id))
+    else:
+        return "No questions found for this quiz.", 404
+    
+def calculate_score(user_id, quiz_id):
+    # Get all quiz questions for the particular quiz
+    quiz = Quiz.query.get(quiz_id)
+    correct_answers = 0
+
+    for question in quiz.questions:
+        # Get the user's answer for this question
+        user_answer = QuizQuestionUserAnswers.query.filter_by(author_id=user_id, question_id=question.id).first()
+        try:
+            if user_answer:
+                # Check if the answer is correct
+                if user_answer.answer == question.answer.option.value:
+                    correct_answers += 1
+        except Exception as e:
+            print(e)
+    total_questions = len(quiz.questions)
+    score = correct_answers
+    is_passed = score >= (total_questions / 2)  # For example, passing score is 50%
+
+    return score, total_questions, is_passed
+
+@app.route("/submit_quiz/<int:quiz_id>", methods=["GET", "POST"])
+@login_required
+def submit_quiz(quiz_id):
+    # Start the timer for the quiz submission
+    start_time = time.time()
+
+    # Get the score, total questions, and passing status
+    score, total_questions, is_passed = calculate_score(current_user.id, quiz_id)
+
+    # Calculate the time taken to complete the quiz
+    time_taken = time.time() - start_time
+
+    # Create a new TestResult
+    test_result = TestResult(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
+        score=score,
+        total_questions=total_questions,
+        time_taken=time_taken,
+        is_passed=is_passed
+    )
+
+    # Add the result to the session and commit to the database
+    db.session.add(test_result)
+    db.session.commit()
+
+    # Redirect the user to the result page
+    return redirect(url_for("view_test_result", test_result_id=test_result.id))
+
+@app.route("/test_result/<int:test_result_id>")
+@login_required
+def view_test_result(test_result_id):
+    test_result = TestResult.query.get_or_404(test_result_id)
+
+    # Ensure that the test result belongs to the current user
+    if test_result.user_id != current_user.id:
+        return redirect(url_for("index"))  # Redirect to the homepage if the test result doesn't belong to the current user
+
+    return render_template("test_result.html", test_result=test_result)

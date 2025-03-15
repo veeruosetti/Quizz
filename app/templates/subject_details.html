@@ -1,50 +1,66 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>{{ subject.name }}</h1>
-    <p>{{ subject.description or "No description available" }}</p>
+    <div class="container mt-5">
+        <!-- Subject Header -->
+        <h1>{{ subject.name }}</h1>
+        <p>{{ subject.description or "No description available" }}</p>
 
-    <a href="{{ url_for('topics', subject_id=subject.id) }}">View topics</a>
-    <br>
-    <h2>Quizzes</h2>
-    {% if not current_user.is_anonymous and current_user.is_admin %}
-        {% include "_quiz_form.html" %}
-    {% endif %}
-    <br>
-    {% if quizzes %}
-        {% for quiz in quizzes %}
-            <table>
-                <tr>
-                    <td>
-                        <a href="{{ url_for('view_quiz', subject_id=quiz.subject_id, quiz_id=quiz.id) }}"><strong>Quiz: {{ quiz.id }}</strong></a>
-                    </td>
-                    {% if not current_user.is_anonymous and current_user.is_admin %}
-                    <td>
-                        {{ quiz.status.value }}
-                    </td>
-                    {% endif %}
-                </tr>
-                <tr>
-                    <td>
-                        {{ quiz.duration.value }}
-                    </td>
-                </tr>
-                {% if current_user.is_admin %}
-                <tr>
-                    <td>
-                        <a href="{{ url_for('edit_quiz', subject_id=quiz.subject_id, quiz_id=quiz.id) }}">Edit</a>
-                    </td>
-                    <td>
-                        <form action="{{ url_for('delete_quiz', subject_id=quiz.subject_id, quiz_id=quiz.id) }}" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endif %}
-            </table>
-            <br>
-        {% endfor %}
-    {% else %}
-    <p>No quizzes were added yet!</p>
-    {% endif %}
+        <!-- View Topics Button -->
+        <a href="{{ url_for('topics', subject_id=subject.id) }}" class="btn btn-secondary mb-4">View Topics</a>
+
+        <!-- Quizzes Section -->
+        <h2>Quizzes</h2>
+
+        {% if not current_user.is_anonymous and current_user.is_admin %}
+            <div class="mb-4">
+                {% include "_quiz_form.html" %}
+            </div>
+        {% endif %}
+
+        <!-- Display Quizzes -->
+        {% if quizzes %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for quiz in quizzes %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ url_for('view_quiz', subject_id=quiz.subject_id, quiz_id=quiz.id) }}" class="text-decoration-none text-dark">
+                                <strong>Quiz: {{ quiz.id }}</strong>
+                            </a>
+                        </h5>
+                        <p class="card-text">
+                            Duration: {{ quiz.duration.value }} minute(s)<br>
+                            Status: {{ quiz.status.value }}<br>
+                        </p>
+
+                        {% if current_user.is_admin %}
+                        <div class="d-flex justify-content-between mt-3">
+                            <a href="{{ url_for('edit_quiz', subject_id=quiz.subject_id, quiz_id=quiz.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                            <form action="{{ url_for('delete_quiz', subject_id=quiz.subject_id, quiz_id=quiz.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <!-- Only show the "Start Quiz" button if the status is "FROZEN" -->
+                        {% if quiz.status.value == 'Frozen' %}
+                        <div class="mt-3">
+                            <form method="GET" action="{{ url_for('start_quiz', subject_id=subject.id, test_id=quiz.id) }}">
+                                <button type="submit" class="btn btn-primary w-100">Start Quiz</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <p>Quiz is not available to start yet.</p>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No quizzes were added yet!</p>
+        {% endif %}
+    </div>
 {% endblock %}

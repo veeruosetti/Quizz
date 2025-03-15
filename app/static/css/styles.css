@@ -1,0 +1,30 @@
+/* Elegant Logout Button */
+.logout-btn {
+    background: linear-gradient(135deg, #0d6efd, #007bff); /* Matching primary blue gradient */
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 30px; /* Rounded corners */
+    font-size: 16px;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.logout-btn:hover {
+    background: linear-gradient(135deg, #0056b3, #003366); /* Darker blue gradient for hover effect */
+    transform: translateY(-2px); /* Slight upward movement on hover */
+}
+
+.logout-btn:focus {
+    outline: none; /* Remove the outline when button is clicked */
+}
+
+.card:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-5px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-title a:hover {
+    color: #007bff; /* Or any color of your choice */
+    text-decoration: underline;
+}
