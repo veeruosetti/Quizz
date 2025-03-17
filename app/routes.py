@@ -8,8 +8,19 @@ from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.utils import secure_filename
 import sqlalchemy as sa
 from app import db, app
-from app.models import User, Subject, Topic, Quiz, QuizQuestion 
-from app.enums import QuestionDurationEnum, QuizStatusEnum
+from app.models import (
+    User, 
+    Subject, 
+    Topic, 
+    Quiz, 
+    QuizQuestion, 
+    QuizQuestionAnswer
+) 
+from app.enums import (
+    QuestionDurationEnum, 
+    QuizStatusEnum,
+    QuestionAnswerEnum
+)
 from app.forms import (
     LoginForm, 
     RegistrationForm, 
@@ -17,7 +28,8 @@ from app.forms import (
     SubjectForm, 
     TopicForm,
     QuizForm,
-    QuizQuestionForm
+    QuizQuestionForm,
+    QuizQuestionAnswerForm
 )
 
 
@@ -273,21 +285,35 @@ def view_quiz(subject_id, quiz_id):
     quiz = db.first_or_404(sa.select(Quiz).where(Quiz.id == quiz_id, Quiz.subject_id == subject_id))
     questions = db.session.scalars(sa.select(QuizQuestion).where(QuizQuestion.quiz_id == quiz_id)).all()
     form = QuizQuestionForm()
-    
+
     if form.validate_on_submit():
+        # Create a new question
         new_question = QuizQuestion(
             question=form.question.data,
             option1=form.option1.data,
             option2=form.option2.data,
             option3=form.option3.data,
             option4=form.option4.data,
-            quiz = quiz
+            quiz_id=quiz_id  # Associate with the correct quiz
         )
+
+        # Get the selected answer as an integer
+        selected_answer = int(form.option.data)  # This should now be an integer
+        new_question_answer = QuizQuestionAnswer(
+            question=new_question,
+            option=QuestionAnswerEnum(selected_answer)  # Convert to enum
+        )
+
+        # Add the new question and answer to the session
         db.session.add(new_question)
+        db.session.commit()  # Commit to get the new question ID
+        new_question_answer.question_id = new_question.id  # Set the foreign key
+        db.session.add(new_question_answer)
         db.session.commit()
-        
+
         flash("Question created successfully!", "success")
         return redirect(url_for("view_quiz", subject_id=quiz.subject_id, quiz_id=quiz_id))
+
     return render_template("quiz_details.html", quiz=quiz, form=form, questions=questions)
 
 @app.route("/subject/<int:subject_id>/quizzes/<int:quiz_id>/edit", methods=["GET", "POST"])
@@ -320,3 +346,18 @@ def delete_quiz(subject_id, quiz_id):
     return redirect(url_for('view_subject', subject_id=subject_id))
 
 
+# @app.route("/subject/<int:subject_id>/quizzes/<int:quiz_id>/questions/<int:question_id>", methods=["GET", "POST"])
+# def quiz_question_answer(subject_id, quiz_id, question_id):
+#     question = db.first_or_404(sa.select(QuizQuestion).where(QuizQuestion.id == question_id, QuizQuestion.quiz_id == quiz_id))
+#     form = QuizQuestionAnswerForm()
+
+#     if form.validate_on_submit():
+#         new_answer = QuizQuestionAnswer(
+#             option=QuestionAnswerEnum[form.option.data],
+#             question=question
+#         )
+#         db.session.add(new_answer)
+#         db.session.commit()
+#         return redirect(url_for("quiz_question_answer", subject_id=subject_id, quiz_id=quiz_id, question_id=question_id))
+
+#     return render_template("quiz_question_answer.html", form=form, question=question)

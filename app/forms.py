@@ -19,7 +19,7 @@ from flask_login import current_user
 
 from app import db
 from app.models import User, Subject, Topic
-from app.enums import QuestionDurationEnum, QuizStatusEnum
+from app.enums import QuestionDurationEnum, QuizStatusEnum, QuestionAnswerEnum
 
 
 # Login Form
@@ -95,4 +95,17 @@ class QuizQuestionForm(FlaskForm):
     option2 = StringField('Option 2', validators=[DataRequired()])
     option3 = StringField('Option 3', validators=[DataRequired()])
     option4 = StringField('Option 4', validators=[DataRequired()])
+
+    # Set choices for the answer options using integer values
+    option = SelectField('Answer', choices=[
+        (QuestionAnswerEnum.OPTION1.value, "Option 1"),
+        (QuestionAnswerEnum.OPTION2.value, "Option 2"),
+        (QuestionAnswerEnum.OPTION3.value, "Option 3"),
+        (QuestionAnswerEnum.OPTION4.value, "Option 4"),
+    ], validators=[DataRequired()])
+
+    submit = SubmitField('Submit')
+
+class QuizQuestionAnswerForm(FlaskForm):
+    option = SelectField('Answer', choices=[(o.name, o.value) for o in QuestionAnswerEnum], validators=[DataRequired()])
     submit = SubmitField('Submit')

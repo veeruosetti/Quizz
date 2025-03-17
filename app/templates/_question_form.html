@@ -42,5 +42,13 @@
         {% endfor %}
     </p>
     
+    <p>
+        {{ form.option.label }}
+        {{ form.option() }}
+        {% for error in form.option.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+    
     <p>{{ form.submit() }}</p>
 </form>

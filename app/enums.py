@@ -20,3 +20,9 @@ class QuestionDurationEnum(int, Enum):
     THREE_MINUTES = THREE_MINUTES
     FOUR_MINUTES = FOUR_MINUTES
     FIVE_MINUTES = FIVE_MINUTES
+
+class QuestionAnswerEnum(int, Enum):
+    OPTION1 = 1
+    OPTION2 = 2
+    OPTION3 = 3
+    OPTION4 = 4
